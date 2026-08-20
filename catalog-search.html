@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>掲載カード検索 - ボーカロイド楽曲カタログ検索</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#12141c;
+    --bg-2:#191c27;
+    --paper:#efe6d1;
+    --paper-shadow:#d8cba9;
+    --ink:#262218;
+    --brass:#c9a227;
+    --brass-dim:#8a731f;
+    --stamp:#b23a2e;
+    --rule:#333a4d;
+    --muted:#8890a6;
+    --text:#e9e6db;
+  }
+
+  *{box-sizing:border-box;}
+
+  body{
+    margin:0;
+    background:
+      radial-gradient(ellipse 900px 500px at 50% -10%, #1c2030 0%, var(--bg) 60%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    min-height:100vh;
+    padding:0 0 64px;
+  }
+
+  a{color:inherit;}
+
+  .wrap{
+    max-width:760px;
+    margin:0 auto;
+    padding:0 24px;
+  }
+
+  /* ---------- header ---------- */
+  header.hero{
+    padding:56px 24px 40px;
+    text-align:center;
+    border-bottom:1px solid var(--rule);
+  }
+
+  .eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    letter-spacing:0.25em;
+    color:var(--brass);
+    text-transform:uppercase;
+  }
+
+  h1{
+    font-family:'Shippori Mincho', serif;
+    font-weight:700;
+    font-size:clamp(28px, 5vw, 40px);
+    margin:14px 0 10px;
+    letter-spacing:0.04em;
+  }
+
+  .hero p{
+    color:var(--muted);
+    font-size:14.5px;
+    line-height:1.9;
+    max-width:480px;
+    margin:0 auto;
+  }
+
+  /* ---------- search: drawer label holder ---------- */
+  .drawer{
+    max-width:640px;
+    margin:36px auto 0;
+    padding:0 24px;
+  }
+
+  .drawer-frame{
+    background:var(--bg-2);
+    border:1px solid var(--rule);
+    border-radius:6px;
+    padding:18px;
+    position:relative;
+  }
+
+  .drawer-frame::before{
+    content:"";
+    position:absolute;
+    top:-1px; left:50%;
+    transform:translateX(-50%);
+    width:64px; height:6px;
+    background:var(--brass-dim);
+    border-radius:0 0 4px 4px;
+  }
+
+  .search-row{
+    display:flex;
+    gap:10px;
+  }
+
+  #q{
+    flex:1;
+    background:var(--paper);
+    color:var(--ink);
+    border:none;
+    border-radius:3px;
+    padding:14px 16px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:15px;
+    letter-spacing:0.02em;
+    outline:none;
+    box-shadow:inset 0 0 0 1px var(--paper-shadow);
+  }
+
+  #q::placeholder{
+    color:#8a7f5f;
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    font-size:13.5px;
+  }
+
+  #q:focus-visible{
+    box-shadow:0 0 0 2px var(--brass);
+  }
+
+  button#go{
+    background:var(--brass);
+    color:#20180a;
+    border:none;
+    border-radius:3px;
+    padding:0 22px;
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    font-weight:700;
+    font-size:14.5px;
+    cursor:pointer;
+    transition:background 0.15s ease, transform 0.1s ease;
+  }
+
+  button#go:hover{ background:#ddb635; }
+  button#go:active{ transform:scale(0.97); }
+  button#go:focus-visible{ outline:2px solid var(--text); outline-offset:2px; }
+
+  #q:disabled, button#go:disabled{
+    opacity:0.5;
+    cursor:not-allowed;
+  }
+
+  .stats{
+    margin-top:12px;
+    font-size:12px;
+    color:var(--muted);
+    font-family:'JetBrains Mono', monospace;
+    text-align:center;
+  }
+
+  /* ---------- results ---------- */
+  #results{
+    max-width:640px;
+    margin:40px auto 0;
+    padding:0 24px;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+  }
+
+  .status-line{
+    font-size:13px;
+    color:var(--muted);
+    letter-spacing:0.03em;
+    padding-left:2px;
+  }
+  .status-line b{ color:var(--brass); font-weight:700; }
+
+  /* index card */
+  .card{
+    position:relative;
+    background:var(--paper);
+    color:var(--ink);
+    border-radius:2px;
+    padding:20px 24px 18px 40px;
+    box-shadow:0 10px 22px -12px rgba(0,0,0,0.6), 0 1px 0 var(--paper-shadow);
+    animation:pull-card 0.32s cubic-bezier(.2,.8,.3,1) both;
+  }
+
+  @keyframes pull-card{
+    from{ opacity:0; transform:translateY(10px); }
+    to{ opacity:1; transform:translateY(0); }
+  }
+
+  .card::before{
+    /* punch hole */
+    content:"";
+    position:absolute;
+    left:16px; top:22px;
+    width:10px; height:10px;
+    border-radius:50%;
+    background:var(--bg);
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,0.15);
+  }
+
+  .card::after{
+    /* dashed rule under title, like a catalog card line */
+    content:"";
+    position:absolute;
+    left:40px; right:24px; top:52px;
+    border-top:1px dashed var(--paper-shadow);
+  }
+
+  .card-title{
+    font-family:'Shippori Mincho', serif;
+    font-weight:700;
+    font-size:16.5px;
+    line-height:1.5;
+    margin:0 0 20px;
+    padding-right:70px;
+  }
+
+  .card-meta{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px 16px;
+    font-size:12.5px;
+    color:#5a5138;
+  }
+
+  .card-meta .id{
+    font-family:'JetBrains Mono', monospace;
+    background:rgba(0,0,0,0.06);
+    padding:1px 6px;
+    border-radius:2px;
+  }
+
+  .card-link{
+    display:inline-block;
+    margin-top:12px;
+    font-size:13px;
+    font-weight:700;
+    color:var(--stamp);
+    text-decoration:none;
+    border-bottom:1px solid var(--stamp);
+    padding-bottom:1px;
+  }
+  .card-link:hover{ opacity:0.75; }
+
+  .stamp{
+    position:absolute;
+    top:14px; right:18px;
+    font-family:'Shippori Mincho', serif;
+    font-weight:700;
+    font-size:13px;
+    color:var(--stamp);
+    border:2px solid var(--stamp);
+    border-radius:4px;
+    padding:3px 8px;
+    transform:rotate(-8deg);
+    letter-spacing:0.1em;
+    opacity:0.9;
+  }
+
+  /* empty / no-result state */
+  .empty{
+    text-align:center;
+    padding:48px 20px;
+    color:var(--muted);
+  }
+
+  .empty svg{
+    width:64px; height:64px;
+    stroke:var(--muted);
+    fill:none;
+    stroke-width:1.4;
+    margin-bottom:14px;
+  }
+
+  .empty .msg{
+    font-family:'Shippori Mincho', serif;
+    font-size:17px;
+    color:var(--text);
+    margin-bottom:6px;
+  }
+
+  .empty .sub{
+    font-size:13px;
+    line-height:1.8;
+  }
+
+  .loading{
+    text-align:center;
+    padding:48px 20px;
+    color:var(--muted);
+    font-family:'JetBrains Mono', monospace;
+    font-size:13px;
+    letter-spacing:0.05em;
+  }
+
+  .error{
+    text-align:center;
+    padding:32px 20px;
+    color:var(--stamp);
+    font-size:13.5px;
+    line-height:1.9;
+    border:1px dashed var(--stamp);
+    border-radius:4px;
+  }
+
+  footer{
+    max-width:640px;
+    margin:64px auto 0;
+    padding:20px 24px 0;
+    border-top:1px solid var(--rule);
+    text-align:center;
+    font-size:11.5px;
+    color:var(--muted);
+    font-family:'JetBrains Mono', monospace;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .card{ animation:none; }
+  }
+
+  @media (max-width:480px){
+    .search-row{ flex-direction:column; }
+    button#go{ padding:12px; }
+    .card{ padding:18px 18px 16px 34px; }
+    .stamp{ position:static; display:inline-block; margin-top:10px; transform:rotate(0); }
+    .card-title{ padding-right:0; }
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="eyebrow">Vocaloid Catalog Index</div>
+  <h1>掲載カード検索</h1>
+  <p>ニコニコ動画のIDを入れると、日刊ボーカロイドランキングなどのカタログ動画に載ったことがあるかを調べられます。</p>
+</header>
+
+<div class="drawer">
+  <div class="drawer-frame">
+    <div class="search-row">
+      <input id="q" type="text" inputmode="search" autocomplete="off"
+             placeholder="sm12345678 のようなIDか、動画URLを入力"
+             aria-label="ニコニコ動画IDで検索" disabled>
+      <button id="go" disabled>検索</button>
+    </div>
+    <div class="stats" id="stats" aria-live="polite"></div>
+  </div>
+</div>
+
+<div id="results" aria-live="polite">
+  <div class="loading">読み込み中 ...</div>
+</div>
+
+<footer>
+  DATA LAST UPDATED: <span id="updated">-</span> / <span id="total">-</span> catalogs indexed
+</footer>
+
+<script>
+/* ============================================================
+   データは同じフォルダに置いた catalogs.json / song_index.json を
+   fetch() で読み込みます。この2ファイルは build_index.py が
+   raw_catalogs.json から生成します（README.md 参照）。
+
+   file:// で直接開くとブラウザの制約で fetch が失敗するため、
+   ローカルで試す場合は同じフォルダで
+     python3 -m http.server 8000
+   を実行し、http://localhost:8000/catalog-search.html を開いてください。
+   ============================================================ */
+
+let CATALOGS = [];      // [{id,title,url,date}, ...]
+let SONG_INDEX = null;  // Map<songId, number[]>  (catalogsの配列インデックス)
+
+const resultsEl = document.getElementById("results");
+const input = document.getElementById("q");
+const goBtn = document.getElementById("go");
+
+async function loadData(){
+  try{
+    const [catalogsRes, indexRes] = await Promise.all([
+      fetch("catalogs.json"),
+      fetch("song_index.json"),
+    ]);
+    if(!catalogsRes.ok || !indexRes.ok) throw new Error("fetch failed");
+
+    const catalogsPayload = await catalogsRes.json();
+    const indexPayload = await indexRes.json();
+
+    CATALOGS = catalogsPayload.catalogs;
+    SONG_INDEX = new Map(Object.entries(indexPayload));
+
+    document.getElementById("updated").textContent = catalogsPayload.generatedAt || "-";
+    document.getElementById("total").textContent = CATALOGS.length;
+    document.getElementById("stats").textContent =
+      `カタログ ${CATALOGS.length} 件 / 楽曲 ${SONG_INDEX.size} 曲を収録`;
+
+    input.disabled = false;
+    goBtn.disabled = false;
+    resultsEl.innerHTML = "";
+  }catch(err){
+    resultsEl.innerHTML = `
+      <div class="error">
+        データを読み込めませんでした。<br>
+        catalogs.json / song_index.json が同じフォルダにあるか、<br>
+        簡易サーバー経由で開いているか（file:// では動きません）を確認してください。
+      </div>`;
+    document.getElementById("stats").textContent = "読み込みエラー";
+  }
+}
+
+// 入力されたテキストからニコニコ動画IDだけを取り出す
+// 例: "https://www.nicovideo.jp/watch/sm12345678?ref=..." -> "sm12345678"
+function normalizeId(raw){
+  if(!raw) return "";
+  const trimmed = raw.trim().toLowerCase();
+  const match = trimmed.match(/(sm|so|nm|ax)\d+/);
+  return match ? match[0] : trimmed;
+}
+
+function escapeHtml(s){
+  return s.replace(/[&<>"']/g, c => ({
+    "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
+  }[c]));
+}
+
+function renderEmptyDrawer(id){
+  resultsEl.innerHTML = `
+    <div class="empty">
+      <svg viewBox="0 0 24 24"><path d="M3 8h18M3 8v11a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V8M3 8l2-5h14l2 5M9 13h6"/></svg>
+      <div class="msg">「${escapeHtml(id)}」は見つかりませんでした</div>
+      <div class="sub">まだどのカタログにも掲載されていないようです。<br>IDの入力ミスがないか確認してみてください。</div>
+    </div>`;
+}
+
+function renderIdle(){
+  resultsEl.innerHTML = "";
+}
+
+function renderResults(id, catalogIndexes){
+  const catalogs = catalogIndexes.map(i => CATALOGS[i]);
+  const sorted = [...catalogs].sort((a,b) => (b.date||"").localeCompare(a.date||""));
+  resultsEl.innerHTML = `
+    <div class="status-line"><b>${escapeHtml(id)}</b> は ${sorted.length} 件のカタログに掲載されています</div>
+    ${sorted.map(c => `
+      <div class="card">
+        <span class="stamp">掲載あり</span>
+        <p class="card-title">${escapeHtml(c.title)}</p>
+        <div class="card-meta">
+          ${c.date ? `<span>${escapeHtml(c.date)}</span>` : ""}
+          <span class="id">${escapeHtml(c.id)}</span>
+        </div>
+        <a class="card-link" href="${escapeHtml(c.url)}" target="_blank" rel="noopener noreferrer">動画を見る →</a>
+      </div>
+    `).join("")}
+  `;
+}
+
+function doSearch(){
+  if(!SONG_INDEX) return;
+  const id = normalizeId(input.value);
+  if(!id){ renderIdle(); return; }
+  const hit = SONG_INDEX.get(id);
+  if(hit && hit.length){
+    renderResults(id, hit);
+  }else{
+    renderEmptyDrawer(id);
+  }
+}
+
+goBtn.addEventListener("click", doSearch);
+input.addEventListener("keydown", e => { if(e.key === "Enter") doSearch(); });
+
+input.disabled = true;
+goBtn.disabled = true;
+loadData();
+</script>
+
+</body>
+</html>
