@@ -461,12 +461,14 @@ function buildLink(url, time){
 
 function renderResults(id, hits){
   // hits: [[catalogIndex, time|null], ...]
+  // time は「1秒前」に調整済みの値（URLの?from=に使う）。
+  // 画面表示は実際の掲載開始秒 = time + 1 にする。
   const rows = hits.map(([i, time]) => ({ catalog: CATALOGS[i], time }));
   const sorted = rows.sort((a,b) => (b.catalog.date||"").localeCompare(a.catalog.date||""));
   resultsEl.innerHTML = `
     <div class="status-line"><b>${escapeHtml(id)}</b> は ${sorted.length} 件のカタログに掲載されています</div>
     ${sorted.map(({catalog: c, time}) => {
-      const timeLabel = formatTime(time);
+      const displayLabel = formatTime(time === null || time === undefined ? null : time + 1);
       const href = buildLink(c.url, time);
       return `
       <div class="card">
@@ -475,9 +477,9 @@ function renderResults(id, hits){
         <div class="card-meta">
           ${c.date ? `<span>${escapeHtml(c.date)}</span>` : ""}
           <span class="id">${escapeHtml(c.id)}</span>
-          ${timeLabel ? `<span class="id">${timeLabel}〜</span>` : ""}
+          ${displayLabel ? `<span class="id">${displayLabel}〜</span>` : ""}
         </div>
-        <a class="card-link" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${timeLabel ? "この場面から再生 →" : "動画を見る →"}</a>
+        <a class="card-link" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${displayLabel ? "この場面から再生 →" : "動画を見る →"}</a>
       </div>`;
     }).join("")}
   `;
