@@ -17,11 +17,22 @@ raw_catalogs.json の形式（1カタログ動画 = 1オブジェクト）:
     "title": "日刊ボーカロイドランキング 8月19日",
     "url": "https://www.nicovideo.jp/watch/sm44444001",
     "date": "2026-08-19",
-    "songs": ["sm12345678", "SM23456789", "https://www.nicovideo.jp/watch/sm34567890?ref=xxx"]
+    "songs": [
+      {"id": "sm12345678", "time": 69},
+      {"id": "SM23456789", "time": 184},
+      "sm34567890"
+    ]
   },
   ...
 ]
-songs の中身はIDでもURLでも大文字小文字混在でもOK（自動で正規化されます）。
+
+songs の各要素は次の2通りの書き方に対応:
+  1. {"id": "sm12345678", "time": 69}  ... 開始秒数(time)ありのIDを再生させたい場合
+  2. "sm12345678"  ... 開始秒数を付けない、従来通りのプレーンなID/URL文字列
+
+id/URLの部分は大文字小文字混在・?ref=つきURLなどでもOK（自動で正規化されます）。
+time は「そのカタログ動画内で、その曲の紹介が始まる秒数」を想定（0開始の整数）。
+1秒前にずらす等の調整は取得側で済ませておく前提で、ここではそのまま使います。
 """
 
 import json
@@ -39,6 +50,25 @@ def normalize_id(raw: str) -> str | None:
         return None
     match = ID_PATTERN.search(raw.strip())
     return match.group(0).lower() if match else None
+
+
+def parse_song_entry(entry) -> tuple[str | None, int | None]:
+    """songs配列の1要素を (正規化されたID, time秒 or None) に変換する。
+    entry は文字列("sm12345678"等)か、{"id":..., "time":...}の辞書。
+    """
+    if isinstance(entry, dict):
+        raw_id = entry.get("id") or entry.get("url") or ""
+        song_id = normalize_id(raw_id)
+        time_val = entry.get("time")
+        if time_val is not None:
+            try:
+                time_val = int(time_val)
+                if time_val < 0:
+                    time_val = None
+            except (TypeError, ValueError):
+                time_val = None
+        return song_id, time_val
+    return normalize_id(entry), None
 
 
 def main():
@@ -77,14 +107,14 @@ def main():
 
         seen_in_this_catalog = set()
         for raw_song in entry.get("songs", []):
-            song_id = normalize_id(raw_song)
+            song_id, time_val = parse_song_entry(raw_song)
             if not song_id:
                 skipped_songs += 1
                 continue
             if song_id in seen_in_this_catalog:
-                continue  # 同じカタログ内の重複IDは1回だけカウント
+                continue  # 同じカタログ内の重複IDは最初の1件だけ採用
             seen_in_this_catalog.add(song_id)
-            song_index.setdefault(song_id, []).append(idx)
+            song_index.setdefault(song_id, []).append([idx, time_val])
 
     out_dir.mkdir(parents=True, exist_ok=True)
 

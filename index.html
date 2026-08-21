@@ -440,22 +440,46 @@ function renderIdle(){
   resultsEl.innerHTML = "";
 }
 
-function renderResults(id, catalogIndexes){
-  const catalogs = catalogIndexes.map(i => CATALOGS[i]);
-  const sorted = [...catalogs].sort((a,b) => (b.date||"").localeCompare(a.date||""));
+function formatTime(sec){
+  if(sec === null || sec === undefined) return null;
+  const m = Math.floor(sec / 60);
+  const s = String(sec % 60).padStart(2, "0");
+  return `${m}:${s}`;
+}
+
+function buildLink(url, time){
+  if(time === null || time === undefined) return url;
+  try{
+    const u = new URL(url);
+    u.searchParams.set("from", time);
+    return u.toString();
+  }catch(e){
+    const sep = url.includes("?") ? "&" : "?";
+    return `${url}${sep}from=${time}`;
+  }
+}
+
+function renderResults(id, hits){
+  // hits: [[catalogIndex, time|null], ...]
+  const rows = hits.map(([i, time]) => ({ catalog: CATALOGS[i], time }));
+  const sorted = rows.sort((a,b) => (b.catalog.date||"").localeCompare(a.catalog.date||""));
   resultsEl.innerHTML = `
     <div class="status-line"><b>${escapeHtml(id)}</b> は ${sorted.length} 件のカタログに掲載されています</div>
-    ${sorted.map(c => `
+    ${sorted.map(({catalog: c, time}) => {
+      const timeLabel = formatTime(time);
+      const href = buildLink(c.url, time);
+      return `
       <div class="card">
         <span class="stamp">掲載あり</span>
         <p class="card-title">${escapeHtml(c.title)}</p>
         <div class="card-meta">
           ${c.date ? `<span>${escapeHtml(c.date)}</span>` : ""}
           <span class="id">${escapeHtml(c.id)}</span>
+          ${timeLabel ? `<span class="id">${timeLabel}〜</span>` : ""}
         </div>
-        <a class="card-link" href="${escapeHtml(c.url)}" target="_blank" rel="noopener noreferrer">動画を見る →</a>
-      </div>
-    `).join("")}
+        <a class="card-link" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${timeLabel ? "この場面から再生 →" : "動画を見る →"}</a>
+      </div>`;
+    }).join("")}
   `;
 }
 
