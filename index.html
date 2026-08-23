@@ -475,6 +475,7 @@ function renderResults(id, hits){
         <span class="stamp">掲載あり</span>
         <p class="card-title">${escapeHtml(c.title)}</p>
         <div class="card-meta">
+          ${c.series ? `<span>${escapeHtml(c.series)}</span>` : ""}
           ${c.date ? `<span>${escapeHtml(c.date)}</span>` : ""}
           <span class="id">${escapeHtml(c.id)}</span>
           ${displayLabel ? `<span class="id">${displayLabel}〜</span>` : ""}
